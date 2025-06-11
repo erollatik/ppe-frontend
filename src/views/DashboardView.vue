@@ -453,7 +453,7 @@ export default {
           params.append('end_date', this.customDateRange.end)
         }
         
-        const response = await fetch(`http://localhost:8000/dashboard?${params}`)
+        const response = await fetch(`http://localhost:5001/dashboard?${params}`)
         
         if (response.ok) {
           this.dashboardData = await response.json()
@@ -589,7 +589,7 @@ export default {
           params.append('end_date', this.customDateRange.end)
         }
         
-        const response = await fetch(`http://localhost:8000/reports/dashboard?${params}`, {
+        const response = await fetch(`http://localhost:5001/reports/dashboard?${params}`, {
           method: 'POST'
         })
         

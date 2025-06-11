@@ -18,42 +18,42 @@ const routes = [
     name: 'Login',
     component: LoginView
   },
+  // ✅ BASIT ROUTE YAPISI
   {
     path: '/main',
     name: 'Main',
     component: MainView,
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: '',
-        redirect: '/main/dashboard'
-      },
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: DashboardView
-      },
-      {
-        path: 'monitoring',
-        name: 'Monitoring',
-        component: MonitoringView
-      },
-      {
-        path: 'workers',
-        name: 'Workers',
-        component: WorkersView
-      },
-      {
-        path: 'violations',
-        name: 'Violations',
-        component: ViolationView
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: SettingsView
-      }
-    ]
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashboardView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/monitoring',
+    name: 'Monitoring',
+    component: MonitoringView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/workers',
+    name: 'Workers',
+    component: WorkersView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/violations',
+    name: 'Violations',
+    component: ViolationView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: SettingsView,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -73,8 +73,8 @@ router.beforeEach((to, from, next) => {
       next()
     }
   } else if (to.path === '/login' && authStore.isLoggedIn) {
-    // Eğer zaten giriş yapmışsa dashboard'a yönlendir
-    next('/main/dashboard')
+    // Eğer zaten giriş yapmışsa main'e yönlendir
+    next('/main')
   } else {
     next()
   }

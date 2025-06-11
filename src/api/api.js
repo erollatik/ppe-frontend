@@ -1,61 +1,78 @@
-// API Base URL
-const API_BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:8081/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
-// Generic API call function
-async function apiCall(endpoint, options = {}) {
-    try {
-        const url = `${API_BASE_URL}${endpoint}`;
-        const response = await fetch(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        return await response.json();
-    } catch (error) {
-        console.error(`API Error for ${endpoint}:`, error);
-        throw error;
-    }
-}
+console.log('🔍 API_BASE_URL:', API_BASE_URL);
 
-// Detection API
-export async function fetchDetection() {
-    return await apiCall('/detection');
-}
-
-// Health Check
+// Health check
 export async function checkHealth() {
-    return await apiCall('/health');
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return await response.json();
+  } catch (error) {
+    console.error('Health check failed:', error);
+    throw error;
+  }
+}
+
+// Detection status  
+export async function fetchDetection() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ppe/detection`);
+    return await response.json();
+  } catch (error) {
+    console.error('Detection fetch failed:', error);
+    throw error;
+  }
+}
+
+// Latest detections
+export async function fetchLatestDetections() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ppe/detections`);
+    return await response.json();
+  } catch (error) {
+    console.error('Latest detections failed:', error);
+    throw error;
+  }
+}
+
+// Stats - Backend'deki route'a uygun
+export async function fetchStats() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ppe/stats`);  // stats/daily → ppe/stats
+    return await response.json();
+  } catch (error) {
+    console.error('Stats fetch failed:', error);
+    throw error;
+  }
 }
 
 // PPE Detection
 export async function detectPPE(imageData) {
-    return await apiCall('/detect', {
-        method: 'POST',
-        body: JSON.stringify({ image: imageData })
+  try {
+    const response = await fetch(`${API_BASE_URL}/ppe/detect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ image: imageData })
     });
+    return await response.json();
+  } catch (error) {
+    console.error('PPE detection failed:', error);
+    throw error;
+  }
 }
 
-// Image Upload for PPE Detection
+// Image upload
 export async function uploadImageForDetection(formData) {
-    return await apiCall('/detect/upload', {
-        method: 'POST',
-        headers: {}, // FormData için Content-Type otomatik
-        body: formData
+  try {
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      body: formData
     });
+    return await response.json();
+  } catch (error) {
+    console.error('Image upload failed:', error);
+    throw error;
+  }
 }
-
-// Export API base URL for other services
-export { API_BASE_URL };
-export default {
-  fetchDetection,
-  checkHealth,
-  detectPPE,
-  uploadImageForDetection
-};

@@ -44,35 +44,35 @@
           </div>
           
           <div v-else class="camera-active">
-            <!-- Gerçek zamanlı görüntü simülasyonu -->
-            <div class="video-feed">
-              <div class="detection-overlay">
-                <!-- Tespit kutuları -->
-                <div 
-                  v-for="detection in currentDetections" 
-                  :key="detection.id"
-                  class="detection-box"
-                  :style="getDetectionStyle(detection)"
-                >
-                  <div class="detection-label">
-                    ID: {{ detection.track_id }}
-                    <br>
-                    Güven: {{ (detection.confidence * 100).toFixed(1) }}%
+            <!-- Mock Kamera Görüntüsü -->
+            <div class="mock-camera">
+              <div class="mock-video">
+                <div class="mock-overlay">
+                  <div class="mock-info">
+                    <div>Zaman: {{ currentTime }}</div>
+                    <div>FPS: {{ currentFPS }}</div>
+                    <div>Tespit: {{ currentDetections.length }} kişi</div>
+                  </div>
+                  
+                  <!-- Mock Detections -->
+                  <div 
+                    v-for="detection in currentDetections.slice(-3)" 
+                    :key="detection.id"
+                    class="detection-box"
+                    :style="getDetectionStyle(detection)"
+                  >
+                    <div class="detection-label">
+                      <span class="worker-id">{{ detection.worker_id }}</span>
+                      <span 
+                        class="safety-status"
+                        :class="detection.has_helmet ? 'safe' : 'danger'"
+                      >
+                        {{ detection.has_helmet ? '✅ Güvenli' : '⚠️ Baret Yok' }}
+                      </span>
+                      <span class="confidence">{{ Math.round(detection.confidence * 100) }}%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <!-- Kamera bilgileri -->
-            <div class="camera-info">
-              <div class="info-item">
-                <strong>Zaman:</strong> {{ currentTime }}
-              </div>
-              <div class="info-item">
-                <strong>FPS:</strong> {{ currentFPS }}
-              </div>
-              <div class="info-item">
-                <strong>Tespit:</strong> {{ currentDetections.length }} kişi
               </div>
             </div>
           </div>
@@ -152,6 +152,8 @@ export default {
   name: 'MainView',
   data() {
     return {
+      API_BASE_URL: 'http://localhost:5001/api',
+      
       isDetectionActive: false,
       connectionStatus: 'connected',
       currentDetections: [],
@@ -164,149 +166,238 @@ export default {
         totalDetections: 0,
         safeDetections: 0,
         violations: 0,
-        complianceRate: 0
+        complianceRate: 100
       },
       pollInterval: null,
       timeInterval: null
     }
   },
+  
   computed: {
     connectionStatusText() {
-      const statusMap = {
-        'connected': 'Bağlı',
-        'disconnected': 'Bağlantı Kesildi',
-        'error': 'Hata'
+      switch(this.connectionStatus) {
+        case 'connected': return 'Bağlı'
+        case 'connecting': return 'Bağlanıyor...'
+        case 'error': return 'Bağlantı Hatası'
+        case 'disconnected': return 'Bağlantı Kesildi'
+        default: return 'Bilinmiyor'
       }
-      return statusMap[this.connectionStatus] || 'Bilinmiyor'
     }
   },
+  
   mounted() {
-    this.startTimeUpdate()
-    this.loadDailyStats()
-    this.startPolling()
+    console.log('🚀 MainView yüklendi');
+    console.log('📡 API_BASE_URL:', this.API_BASE_URL);
+    this.loadDailyStats();
+    this.startPolling();
+    this.startTimeUpdate();
   },
+  
   beforeUnmount() {
-    this.stopPolling()
-    this.stopTimeUpdate()
+    console.log('🛑 MainView kapatılıyor');
+    this.stopPolling();
+    this.stopTimeUpdate();
   },
+  
   methods: {
-    toggleDetection() {
-      this.isDetectionActive = !this.isDetectionActive
+    async toggleDetection() {
+      console.log('🎬 Toggle detection:', this.isDetectionActive ? 'STOP' : 'START');
+      
+      this.isDetectionActive = !this.isDetectionActive;
+      
       if (this.isDetectionActive) {
-        this.startDetection()
+        await this.startDetection();
       } else {
-        this.stopDetection()
+        await this.stopDetection();
       }
     },
     
     async startDetection() {
       try {
-        const response = await fetch('http://localhost:8000/detection/start', {
-          method: 'POST'
-        })
-        if (response.ok) {
-          console.log('Tespit başlatıldı')
+        console.log('🎬 Tespit başlatılıyor...');
+        
+        const response = await fetch(`${this.API_BASE_URL}/ppe/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ Tespit başlatıldı:', result.message);
+          this.connectionStatus = 'connected';
+        } else {
+          console.error('❌ Tespit başlatma hatası:', result.message);
+          this.isDetectionActive = false;
         }
       } catch (error) {
-        console.error('Tespit başlatma hatası:', error)
+        console.error('❌ Tespit başlatma hatası:', error);
+        this.isDetectionActive = false;
+        this.connectionStatus = 'error';
       }
     },
     
     async stopDetection() {
       try {
-        const response = await fetch('http://localhost:8000/detection/stop', {
-          method: 'POST'
-        })
-        if (response.ok) {
-          console.log('Tespit durduruldu')
-          this.currentDetections = []
+        console.log('⏹️ Tespit durduruluyor...');
+        
+        const response = await fetch(`${this.API_BASE_URL}/ppe/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ Tespit durduruldu:', result.message);
+          this.currentDetections = [];
         }
       } catch (error) {
-        console.error('Tespit durdurma hatası:', error)
+        console.error('❌ Tespit durdurma hatası:', error);
       }
     },
     
     startPolling() {
+      console.log('🔄 Polling başlatılıyor...');
       this.pollInterval = setInterval(async () => {
         if (this.isDetectionActive) {
-          await this.fetchLatestDetections()
+          await this.fetchLatestDetections();
         }
-        await this.fetchStats()
-      }, 1000)
+        await this.fetchStats();
+      }, 2000);
     },
     
     stopPolling() {
       if (this.pollInterval) {
-        clearInterval(this.pollInterval)
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
+        console.log('🛑 Polling durduruldu');
       }
     },
     
     startTimeUpdate() {
-      this.updateTime()
-      this.timeInterval = setInterval(this.updateTime, 1000)
+      this.updateTime();
+      this.timeInterval = setInterval(this.updateTime, 1000);
     },
     
     stopTimeUpdate() {
       if (this.timeInterval) {
-        clearInterval(this.timeInterval)
+        clearInterval(this.timeInterval);
+        this.timeInterval = null;
       }
     },
     
     updateTime() {
-      this.currentTime = new Date().toLocaleTimeString('tr-TR')
+      this.currentTime = new Date().toLocaleTimeString('tr-TR');
     },
     
     async fetchLatestDetections() {
       try {
-        const response = await fetch('http://localhost:8000/ppe/latest')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.detection) {
-            this.currentDetections = [data.detection]
-            this.recentDetections.unshift(data)
+        const response = await fetch(`${this.API_BASE_URL}/ppe/detections`);
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.detections) {
+          const detections = result.data.detections;
+          
+          if (detections.length > 0) {
+            this.currentDetections = detections;
+            
+            // Son tespitleri güncelle
+            detections.forEach(detection => {
+              const exists = this.recentDetections.find(r => r.id === detection.id);
+              if (!exists) {
+                this.recentDetections.unshift(detection);
+              }
+            });
+            
+            // Maksimum 50 tespit tut
             if (this.recentDetections.length > 50) {
-              this.recentDetections.pop()
+              this.recentDetections = this.recentDetections.slice(0, 50);
             }
           }
-          this.connectionStatus = 'connected'
+          
+          this.connectionStatus = 'connected';
         }
       } catch (error) {
-        console.error('Tespit verisi alınamadı:', error)
-        this.connectionStatus = 'error'
+        console.error('❌ Tespit verisi alınamadı:', error);
+        this.connectionStatus = 'error';
       }
     },
     
     async fetchStats() {
       try {
-        const response = await fetch('http://localhost:8000/stats/daily')
-        if (response.ok) {
-          const stats = await response.json()
-          this.dailyStats = stats
-          this.activeWorkerCount = stats.activeWorkers || 0
-          this.todayViolations = stats.violations || 0
+        const response = await fetch(`${this.API_BASE_URL}/ppe/stats`);
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.stats) {
+          const stats = result.data.stats;
+          
+          this.dailyStats = {
+            totalDetections: stats.totalDetections || 0,
+            safeDetections: stats.safeDetections || 0,
+            violations: stats.violations || 0,
+            complianceRate: stats.complianceRate || 100
+          };
+          
+          this.activeWorkerCount = stats.activeWorkers || 0;
+          this.todayViolations = stats.violations || 0;
         }
       } catch (error) {
-        console.error('İstatistik verisi alınamadı:', error)
+        console.error('❌ İstatistik verisi alınamadı:', error);
       }
     },
     
     async loadDailyStats() {
-      await this.fetchStats()
-    },
-    
-    getDetectionStyle(detection) {
-      // Tespit kutusunun pozisyonu (örnek)
-      return {
-        left: '20%',
-        top: '30%',
-        width: '200px',
-        height: '150px'
+      try {
+        console.log('📊 İstatistikler yükleniyor...');
+        
+        const response = await fetch(`${this.API_BASE_URL}/ppe/stats`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          const stats = result.data.stats || result.data;
+          
+          this.dailyStats = {
+            totalDetections: stats.totalDetections || 0,
+            safeDetections: stats.safeDetections || 0,
+            violations: stats.violations || 0,
+            complianceRate: stats.complianceRate || 100
+          };
+          
+          this.activeWorkerCount = stats.activeWorkers || 0;
+          this.todayViolations = stats.violations || 0;
+          
+          console.log('✅ İstatistikler yüklendi:', this.dailyStats);
+        }
+      } catch (error) {
+        console.error('❌ İstatistik yükleme hatası:', error);
       }
+    },
+
+    getDetectionStyle(detection) {
+      // Mock pozisyonlar - gerçek uygulamada detection.bbox kullanılır
+      const positions = [
+        { left: '15%', top: '25%' },
+        { left: '45%', top: '35%' },
+        { left: '70%', top: '20%' }
+      ];
+      
+      const index = detection.track_id % positions.length;
+      
+      return {
+        ...positions[index],
+        width: '120px',
+        height: '80px'
+      };
     },
     
     formatTime(timestamp) {
-      if (!timestamp) return '--:--:--'
-      return new Date(timestamp * 1000).toLocaleTimeString('tr-TR')
+      if (!timestamp) return '--:--:--';
+      return new Date(timestamp).toLocaleTimeString('tr-TR');
     }
   }
 }
@@ -386,6 +477,7 @@ export default {
   align-items: center;
   justify-content: center;
   background: linear-gradient(45deg, #333, #555);
+  border-radius: 8px;
 }
 
 .placeholder-content {
@@ -399,58 +491,123 @@ export default {
   margin-bottom: 1rem;
 }
 
+/* ✅ CAMERA-ACTIVE DÜZELTME */
 .camera-active {
   height: 100%;
-  background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
+  width: 100%;
   position: relative;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.video-feed {
+/* ✅ MOCK KAMERA STİLLERİ - DÜZELTME */
+.mock-camera {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  min-height: 400px; /* ✅ Minimum yükseklik ekle */
+}
+
+.mock-video {
+  width: 100%;
   height: 100%;
   position: relative;
+  background: 
+    radial-gradient(circle at 30% 70%, rgba(255,255,255,0.1) 2px, transparent 2px),
+    radial-gradient(circle at 70% 30%, rgba(255,255,255,0.1) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 1px, transparent 1px);
+  animation: mockNoise 2s infinite;
 }
 
-.detection-overlay {
+@keyframes mockNoise {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
+
+.mock-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  padding: 15px;
+}
+
+.mock-info {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  z-index: 10;
 }
 
 .detection-box {
   position: absolute;
   border: 3px solid #00ff00;
+  background: rgba(0,255,0,0.15);
   border-radius: 4px;
-  background: rgba(0, 255, 0, 0.1);
+  min-width: 120px;
+  min-height: 80px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 255, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
 }
 
 .detection-label {
   position: absolute;
-  top: -35px;
+  top: -30px;
   left: 0;
-  background: #00ff00;
-  color: black;
-  padding: 2px 8px;
+  background: rgba(0,0,0,0.9);
+  color: white;
+  padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
-  font-weight: bold;
   white-space: nowrap;
-}
-
-.camera-info {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 10px;
-  border-radius: 4px;
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
+  z-index: 5;
 }
 
+.safety-status.safe {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.safety-status.danger {
+  color: #dc3545;
+  font-weight: bold;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.5; }
+}
+
+.confidence {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.worker-id {
+  color: #17a2b8;
+  font-weight: bold;
+}
+
+/* DİĞER STİLLER AYNI KALACAK */
 .info-panel {
   display: flex;
   flex-direction: column;

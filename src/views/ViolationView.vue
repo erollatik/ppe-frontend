@@ -486,7 +486,7 @@ export default {
     async loadViolations() {
       this.isLoading = true
       try {
-        const response = await fetch('http://localhost:8000/violations', {
+        const response = await fetch('http://localhost:5001/violations', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -506,7 +506,7 @@ export default {
     
     async loadStats() {
       try {
-        const response = await fetch('http://localhost:8000/violations/stats')
+        const response = await fetch('http://localhost:5001/violations/stats')
         if (response.ok) {
           this.violationStats = await response.json()
         }
@@ -664,7 +664,7 @@ export default {
     showImage(violation) {
       this.selectedImage = {
         id: violation.id,
-        url: `http://localhost:8000/images/${violation.image_path}`,
+        url: `http://localhost:5001/images/${violation.image_path}`,
         timestamp: violation.timestamp,
         worker_id: violation.worker_id
       }
@@ -698,7 +698,7 @@ export default {
     async deleteViolation(violation) {
       if (confirm(`#${violation.id} numaralı ihlal kaydını silmek istediğinizden emin misiniz?`)) {
         try {
-          const response = await fetch(`http://localhost:8000/violations/${violation.id}`, {
+          const response = await fetch(`http://localhost:5001/violations/${violation.id}`, {
             method: 'DELETE'
           })
           
@@ -717,7 +717,7 @@ export default {
     
     async exportViolations() {
       try {
-        const response = await fetch('http://localhost:8000/violations/export', {
+        const response = await fetch('http://localhost:5001/violations/export', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

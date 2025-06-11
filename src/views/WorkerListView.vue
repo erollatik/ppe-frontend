@@ -157,7 +157,7 @@
           <div class="worker-avatar">
             <img 
               v-if="worker.photo" 
-              :src="`http://localhost:8000/photos/${worker.photo}`" 
+              :src="`http://localhost:5001/photos/${worker.photo}`" 
               :alt="worker.name"
               class="avatar-img"
             />
@@ -285,7 +285,7 @@
                   <div class="worker-avatar-small">
                     <img 
                       v-if="worker.photo" 
-                      :src="`http://localhost:8000/photos/${worker.photo}`" 
+                      :src="`http://localhost:5001/photos/${worker.photo}`" 
                       :alt="worker.name"
                       class="avatar-img-small"
                     />
@@ -565,7 +565,7 @@
               <div class="profile-avatar">
                 <img 
                   v-if="selectedWorker.photo" 
-                  :src="`http://localhost:8000/photos/${selectedWorker.photo}`" 
+                  :src="`http://localhost:5001/photos/${selectedWorker.photo}`" 
                   :alt="selectedWorker.name"
                   class="profile-img"
                 />
@@ -775,7 +775,7 @@ export default {
     async loadWorkers() {
       this.isLoading = true
       try {
-        const response = await fetch('http://localhost:8000/workers')
+        const response = await fetch('http://localhost:5001/workers')
         if (response.ok) {
           this.workers = await response.json()
           this.applyFilters()
@@ -790,7 +790,7 @@ export default {
     
     async loadStats() {
       try {
-        const response = await fetch('http://localhost:8000/workers/stats')
+        const response = await fetch('http://localhost:5001/workers/stats')
         if (response.ok) {
           this.workerStats = await response.json()
         }
@@ -903,7 +903,7 @@ export default {
         hire_date: worker.hire_date || '',
         status: worker.status,
         photo: worker.photo,
-        photoPreview: worker.photo ? `http://localhost:8000/photos/${worker.photo}` : null,
+        photoPreview: worker.photo ? `http://localhost:5001/photos/${worker.photo}` : null,
         notes: worker.notes || ''
       }
       this.showEditWorkerModal = true
@@ -912,7 +912,7 @@ export default {
     async deleteWorker(worker) {
       if (confirm(`${worker.name} adlı çalışanı silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz ve çalışana ait tüm veriler silinecektir.`)) {
         try {
-          const response = await fetch(`http://localhost:8000/workers/${worker.id}`, {
+          const response = await fetch(`http://localhost:5001/workers/${worker.id}`, {
             method: 'DELETE'
           })
           
@@ -980,8 +980,8 @@ export default {
         })
         
         const url = this.showEditWorkerModal 
-          ? `http://localhost:8000/workers/${this.workerForm.id}`
-          : 'http://localhost:8000/workers'
+          ? `http://localhost:5001/workers/${this.workerForm.id}`
+          : 'http://localhost:5001/workers'
         
         const method = this.showEditWorkerModal ? 'PUT' : 'POST'
         
@@ -1043,7 +1043,7 @@ export default {
     
     async exportWorkers() {
       try {
-        const response = await fetch('http://localhost:8000/workers/export', {
+        const response = await fetch('http://localhost:5001/workers/export', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

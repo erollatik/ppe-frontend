@@ -401,7 +401,7 @@ export default {
   methods: {
     async loadSettings() {
       try {
-        const response = await fetch('http://localhost:8000/settings')
+        const response = await fetch('http://localhost:5001/settings')
         if (response.ok) {
           const data = await response.json()
           this.settings = { ...this.settings, ...data }
@@ -416,7 +416,7 @@ export default {
       this.message = ''
       
       try {
-        const response = await fetch('http://localhost:8000/settings', {
+        const response = await fetch('http://localhost:5001/settings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -439,7 +439,7 @@ export default {
     
     async testDatabaseConnection() {
       try {
-        const response = await fetch('http://localhost:8000/database/test', {
+        const response = await fetch('http://localhost:5001/database/test', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

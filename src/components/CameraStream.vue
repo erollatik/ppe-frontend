@@ -262,13 +262,120 @@ export default {
       }
     },
 
+    async processFrame() {
+        if (!this.isDetecting || !this.isStreaming) return;
+
+        try {
+            // Canvas'a video frame'ini çiz
+            const canvas = this.$refs.canvasElement;
+            const video = this.$refs.videoElement;
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            // Canvas'ı blob'a çevir
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+
+                const formData = new FormData();
+                formData.append('image', blob, 'frame.jpg');
+
+                try {
+                    const response = await fetch('http://localhost:3001/api/detect-ppe', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.handleDetectionResult(result);
+                    }
+                } catch (error) {
+                    console.error('Detection error:', error);
+                }
+            }, 'image/jpeg', 0.8);
+
+        } catch (error) {
+            console.error('Frame processing error:', error);
+        }
+    },
+
+    handleDetectionResult(result) {
+        if (result.success && result.detections) {
+            this.currentDetections = result.detections;
+            this.drawDetections(result.detections);
+            
+            // İhlal kontrolü
+            const violations = result.detections.filter(d => 
+                !d.helmet || !d.vest || !d.gloves
+            );
+            
+            if (violations.length > 0) {
+                this.violationCount = violations.length;
+                this.triggerAlert(violations);
+            }
+        }
+    },
+
+    drawDetections(detections) {
+        const canvas = this.$refs.canvasElement;
+        const ctx = canvas.getContext('2d');
+        
+        // Önceki çizimleri temizle
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        detections.forEach(detection => {
+            // Bounding box çiz
+            ctx.strokeStyle = detection.helmet && detection.vest ? '#00ff00' : '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(detection.x, detection.y, detection.width, detection.height);
+            
+            // Label çiz
+            ctx.fillStyle = detection.helmet && detection.vest ? '#00ff00' : '#ff0000';
+            ctx.font = '16px Arial';
+            ctx.fillText(
+                `Person ${detection.confidence.toFixed(2)}`, 
+                detection.x, 
+                detection.y - 10
+            );
+            
+            // PPE durumu
+            const ppeStatus = [];
+            if (!detection.helmet) ppeStatus.push('Baret');
+            if (!detection.vest) ppeStatus.push('Yelek');
+            if (!detection.gloves) ppeStatus.push('Eldiven');
+            
+            if (ppeStatus.length > 0) {
+                ctx.fillText(
+                    `Eksik: ${ppeStatus.join(', ')}`, 
+                    detection.x, 
+                    detection.y + detection.height + 20
+                );
+            }
+        });
+    },
+
+    // Detection loop'u başlat
+    startDetectionLoop() {
+        if (this.detectionInterval) {
+            clearInterval(this.detectionInterval);
+        }
+        
+        this.detectionInterval = setInterval(() => {
+            this.processFrame();
+        }, 1000); // 1 saniyede bir
+    }
+        
+
     startDetection() {
       this.isDetecting = true;
       
       // C++ backend'den detection sonuçlarını al
       this.detectionInterval = setInterval(async () => {
         try {
-          const response = await fetch('http://localhost:8080/ppe/latest');
+          const response = await fetch('http://localhost:8080/ppe/detections');
           const data = await response.json();
           
           if (data.status === 'success') {
@@ -317,7 +424,7 @@ export default {
         ctx.fillText(label, x, y - 5);
       });
     },
-    
+
     onVideoLoaded() {
       this.isStreaming = true
       this.isLoading = false
