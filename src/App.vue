@@ -34,7 +34,7 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth.js'
-import { authAPI } from '@/api/auth.js'  // ← Bu satırı düzelt!
+import { authAPI } from '@/api/auth.js'
 
 export default {
   name: 'App',
@@ -101,40 +101,64 @@ export default {
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #f5f5f5;
 }
 
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2c3e50;
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
 .main-nav {
   background: #2c3e50;
   color: white;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-brand h2 {
   color: #ecf0f1;
+  font-size: 1.3rem;
+  margin: 0;
 }
 
 .nav-links {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .nav-link {
   color: #ecf0f1;
   text-decoration: none;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 4px;
   transition: background 0.3s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .nav-link:hover,
@@ -153,14 +177,102 @@ body {
 }
 
 main {
+  width: 100%;
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
 main.with-nav {
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 60px);
 }
 
 .icon {
-  font-size: 1.1em;
+  font-size: 1em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-nav {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .nav-links {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .nav-link {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  main.with-nav {
+    min-height: calc(100vh - 100px);
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-brand h2 {
+    font-size: 1.1rem;
+  }
+  
+  .nav-links {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .nav-link {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+header h1 {
+  color: #2c3e50;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.error-toast {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #f44336;
+  color: white;
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease-out;
+}
+
+.error-toast button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 </style>

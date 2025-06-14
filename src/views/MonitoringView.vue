@@ -156,50 +156,7 @@
           
           <!-- Kamera Stream Alanı -->
           <div class="camera-stream">
-            <img 
-              v-if="monitoringActive && camera.status === 'active'"
-              :src="getCameraStreamUrl(camera.id)" 
-              :alt="`${camera.name} Stream`"
-              class="stream-image"
-              @error="handleStreamError(camera)"
-              @load="handleStreamLoad(camera)"
-            />
-            <div v-else class="stream-placeholder">
-              <div class="placeholder-content">
-                <div class="placeholder-icon">📹</div>
-                <p v-if="!monitoringActive">Monitoring Durduruldu</p>
-                <p v-else-if="camera.status === 'inactive'">Kamera Pasif</p>
-                <p v-else-if="camera.status === 'error'">Kamera Hatası</p>
-                <p v-else>Bağlanıyor...</p>
-              </div>
-            </div>
-            
-            <!-- Tespit Overlay'leri -->
-            <div v-if="camera.detections && camera.detections.length > 0" class="detection-overlay">
-              <div 
-                v-for="detection in camera.detections" 
-                :key="detection.id"
-                class="detection-box"
-                :style="getDetectionBoxStyle(detection)"
-                @click="showDetectionDetails(detection)"
-              >
-                <div class="detection-label">
-                  <span class="person-id">👤 {{ detection.person_id }}</span>
-                  <span class="confidence">{{ Math.round(detection.confidence * 100) }}%</span>
-                </div>
-                <div class="equipment-indicators">
-                  <span :class="['equipment-icon', detection.equipment.helmet ? 'ok' : 'missing']">
-                    🪖
-                  </span>
-                  <span :class="['equipment-icon', detection.equipment.vest ? 'ok' : 'missing']">
-                    🦺
-                  </span>
-                  <span :class="['equipment-icon', detection.equipment.gloves ? 'ok' : 'missing']">
-                    🧤
-                  </span>
-                </div>
-              </div>
-            </div>
+            <PPEDetection />
           </div>
           
           <div class="camera-footer">
@@ -242,53 +199,8 @@
               <button @click="toggleFullscreen" class="btn btn-primary">🔍 Tam Ekran</button>
             </div>
           </div>
-          
           <div class="focused-stream">
-            <img 
-              v-if="monitoringActive && focusedCamera.status === 'active'"
-              :src="getCameraStreamUrl(focusedCamera.id)" 
-              :alt="`${focusedCamera.name} Stream`"
-              class="focused-stream-image"
-            />
-            <div v-else class="focused-placeholder">
-              <p>Kamera görüntüsü mevcut değil</p>
-            </div>
-          </div>
-          
-          <div class="focused-sidebar">
-            <div class="detection-details">
-              <h4>🔍 Son Tespitler</h4>
-              <div v-if="focusedCamera.detections && focusedCamera.detections.length > 0" class="detections-list">
-                <div 
-                  v-for="detection in focusedCamera.detections" 
-                  :key="detection.id"
-                  class="detection-item"
-                >
-                  <div class="detection-header">
-                    <span class="person-id">👤 {{ detection.person_id }}</span>
-                    <span class="detection-time">{{ formatTime(detection.timestamp) }}</span>
-                  </div>
-                  <div class="equipment-status">
-                    <div class="equipment-item" :class="{ 'violation': !detection.equipment.helmet }">
-                      <span class="equipment-icon">🪖</span>
-                      <span>Kask: {{ detection.equipment.helmet ? 'Var' : 'YOK' }}</span>
-                    </div>
-                    <div class="equipment-item" :class="{ 'violation': !detection.equipment.vest }">
-                      <span class="equipment-icon">🦺</span>
-                      <span>Yelek: {{ detection.equipment.vest ? 'Var' : 'YOK' }}</span>
-                    </div>
-                    <div class="equipment-item" :class="{ 'violation': !detection.equipment.gloves }">
-                      <span class="equipment-icon">🧤</span>
-                      <span>Eldiven: {{ detection.equipment.gloves ? 'Var' : 'YOK' }}</span>
-                    </div>
-                  </div>
-                  <div class="detection-confidence">
-                    Güven: {{ Math.round(detection.confidence * 100) }}%
-                  </div>
-                </div>
-              </div>
-              <p v-else class="no-detections">Henüz tespit yok</p>
-            </div>
+            <PPEDetection />
           </div>
         </div>
       </div>
@@ -329,6 +241,7 @@
               <button @click="focusCamera(camera)" class="action-btn">👁️ Görüntüle</button>
               <button @click="showCameraSettings(camera)" class="action-btn">⚙️ Ayarlar</button>
             </div>
+            <PPEDetection />
           </div>
         </div>
       </div>
@@ -437,10 +350,12 @@
 </template>
 
 <script>
+import PPEDetection from '../components/PPEDetection.vue';
 import { ppeAPI } from '@/api/ppe.js';
 
 export default {
   name: 'MonitoringView',
+  components: { PPEDetection },
   data() {
     return {
       // Monitoring durumu
@@ -692,19 +607,6 @@ export default {
       return 'grid-3x3';
     },
     
-    // Tespit kutusu stili
-    getDetectionBoxStyle(detection) {
-      if (!detection.bbox) return {};
-      
-      const [x, y, width, height] = detection.bbox;
-      return {
-        left: `${x}px`,
-        top: `${y}px`,
-        width: `${width}px`,
-        height: `${height}px`
-      };
-    },
-    
     // Kamera filtreleme
     filterCameras() {
       this.filteredCameras = this.cameras.filter(camera => {
@@ -800,26 +702,6 @@ export default {
         alertThreshold: this.alertThreshold,
         audioAlerts: this.audioAlerts
       });
-    },
-    
-    // Stream hata işleme
-    handleStreamError(camera) {
-      camera.status = 'error';
-      this.showNotification(`${camera.name} bağlantı hatası 📹❌`, 'error');
-    },
-    
-    // Stream yükleme
-    handleStreamLoad(camera) {
-      if (camera.status === 'error') {
-        camera.status = 'active';
-        this.showNotification(`${camera.name} bağlantı kuruldu 📹✅`, 'success');
-      }
-    },
-    
-    // Tespit detaylarını göster
-    showDetectionDetails(detection) {
-      // Tespit detay modal'ı açılabilir
-      console.log('Tespit detayları:', detection);
     },
     
     // Tespitleri temizle

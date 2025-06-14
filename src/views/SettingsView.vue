@@ -111,6 +111,7 @@
               <input 
                 v-model="settings.email.enabled" 
                 type="checkbox"
+                @change="updateMailToggle"
               />
               <span class="checkmark"></span>
               E-posta bildirimlerini etkinleştir
@@ -119,49 +120,47 @@
           
           <template v-if="settings.email.enabled">
             <div class="form-group">
-              <label>SMTP Sunucusu:</label>
-              <input 
-                v-model="settings.email.smtpServer" 
-                type="text" 
-                placeholder="smtp.gmail.com"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label>SMTP Port:</label>
-              <input 
-                v-model.number="settings.email.smtpPort" 
-                type="number" 
-                placeholder="587"
-              />
-            </div>
-            
-            <div class="form-group">
               <label>Gönderen E-posta:</label>
               <input 
                 v-model="settings.email.senderEmail" 
                 type="email" 
                 placeholder="sistem@sirket.com"
+                readonly
               />
+              <small>Sistem tarafından otomatik olarak ayarlanmıştır</small>
             </div>
             
             <div class="form-group">
-              <label>E-posta Şifresi:</label>
-              <input 
-                v-model="settings.email.senderPassword" 
-                type="password" 
-                placeholder="••••••••"
-              />
+              <label>Alıcı E-posta Adresi:</label>
+              <div class="email-input-group">
+                <input 
+                  v-model="settings.email.recipientEmail" 
+                  type="email" 
+                  placeholder="admin@sirket.com"
+                  class="email-input"
+                />
+                <button @click="updateMailRecipient" class="update-btn">
+                  Güncelle
+                </button>
+              </div>
             </div>
             
             <div class="form-group">
-              <label>Alıcı E-postalar:</label>
-              <textarea 
-                v-model="settings.email.recipients" 
-                placeholder="admin@sirket.com, guvenlik@sirket.com"
-                rows="3"
-              ></textarea>
-              <small>Virgülle ayırarak birden fazla e-posta adresi girebilirsiniz</small>
+              <label>Mail Durumu:</label>
+              <div class="status-info">
+                <span class="status-badge" :class="{ 'active': settings.email.enabled }">
+                  {{ settings.email.enabled ? 'Aktif' : 'Devre Dışı' }}
+                </span>
+                <span class="recipient-info">
+                  Alıcı: {{ settings.email.recipientEmail || 'Belirtilmemiş' }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <button @click="sendTestMail" class="test-mail-btn" :disabled="!settings.email.recipientEmail">
+                📧 Test Maili Gönder
+              </button>
             </div>
           </template>
         </div>
@@ -369,9 +368,9 @@ export default {
           enabled: false,
           smtpServer: 'smtp.gmail.com',
           smtpPort: 587,
-          senderEmail: '',
+          senderEmail: 'semihsemerci45@gmail.com',
           senderPassword: '',
-          recipients: ''
+          recipientEmail: ''
         },
         database: {
           type: 'sqlite',
@@ -401,13 +400,30 @@ export default {
   methods: {
     async loadSettings() {
       try {
+        // Load general settings
         const response = await fetch('http://localhost:5001/api/ppe/settings')
         if (response.ok) {
           const data = await response.json()
           this.settings = { ...this.settings, ...data }
         }
+        
+        // Load mail settings
+        await this.loadMailSettings()
       } catch (error) {
         console.error('Ayarlar yüklenemedi:', error)
+      }
+    },
+    
+    async loadMailSettings() {
+      try {
+        const response = await fetch('http://localhost:5001/api/ppe/mail/status')
+        if (response.ok) {
+          const data = await response.json()
+          this.settings.email.enabled = data.autoMailEnabled || false
+          this.settings.email.recipientEmail = data.recipientEmail || ''
+        }
+      } catch (error) {
+        console.error('Mail ayarları yüklenemedi:', error)
       }
     },
     
@@ -477,9 +493,9 @@ export default {
             enabled: false,
             smtpServer: 'smtp.gmail.com',
             smtpPort: 587,
-            senderEmail: '',
+            senderEmail: 'semihsemerci45@gmail.com',
             senderPassword: '',
-            recipients: ''
+            recipientEmail: ''
           },
           database: {
             type: 'sqlite',
@@ -511,6 +527,73 @@ export default {
       setTimeout(() => {
         this.message = ''
       }, 3000)
+    },
+
+    async updateMailToggle() {
+      try {
+        const response = await fetch('http://localhost:5001/api/ppe/mail/toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ enabled: this.settings.email.enabled })
+        })
+        
+        if (response.ok) {
+          this.showMessage('Mail ayarı güncellendi! ✅', 'success')
+        } else {
+          this.showMessage('Mail ayarı güncellenemedi! ❌', 'error')
+          // Hata durumunda eski duruma geri döndür
+          this.settings.email.enabled = !this.settings.email.enabled
+        }
+      } catch (error) {
+        console.error('Mail toggle hatası:', error)
+        this.showMessage('Bağlantı hatası! 🔄', 'error')
+        this.settings.email.enabled = !this.settings.email.enabled
+      }
+    },
+
+    async updateMailRecipient() {
+      try {
+        const response = await fetch('http://localhost:5001/api/ppe/mail/set-recipient', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: this.settings.email.recipientEmail })
+        })
+        
+        if (response.ok) {
+          this.showMessage('E-posta adresi güncellendi! ✅', 'success')
+        } else {
+          this.showMessage('E-posta adresi güncellenemedi! ❌', 'error')
+        }
+      } catch (error) {
+        console.error('Mail recipient hatası:', error)
+        this.showMessage('Bağlantı hatası! 🔄', 'error')
+      }
+    },
+
+    async sendTestMail() {
+      try {
+        this.showMessage('Test maili gönderiliyor... ⏳', 'success')
+        
+        const response = await fetch('http://localhost:5001/api/ppe/mail/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          this.showMessage('Test maili başarıyla gönderildi! 📧✅', 'success')
+        } else {
+          this.showMessage('Test maili gönderilemedi! ❌', 'error')
+        }
+      } catch (error) {
+        console.error('Test mail hatası:', error)
+        this.showMessage('Test maili gönderilirken hata oluştu! 🔄', 'error')
+      }
     }
   }
 }
@@ -767,5 +850,89 @@ export default {
   .settings-container {
     padding: 1rem;
   }
+}
+
+.email-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.email-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.email-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.update-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  background: #28a745;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+  white-space: nowrap;
+}
+
+.update-btn:hover {
+  background: #218838;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #6c757d;
+  color: white;
+}
+
+.status-badge.active {
+  background: #28a745;
+}
+
+.recipient-info {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.test-mail-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.test-mail-btn:hover:not(:disabled) {
+  background: #138496;
+}
+
+.test-mail-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
 }
 </style>
