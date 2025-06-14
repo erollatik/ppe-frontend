@@ -1460,7 +1460,7 @@ export default {
     async loadWorkers() {
       this.isLoading = true
       try {
-        const response = await fetch('http://localhost:5001/workers')
+        const response = await fetch('http://localhost:5001/api/ppe/workers')
         if (response.ok) {
           this.workers = await response.json()
           this.applyFilters()
@@ -1475,7 +1475,7 @@ export default {
     
     async loadDepartments() {
       try {
-        const response = await fetch('http://localhost:5001/departments')
+        const response = await fetch('http://localhost:5001/api/ppe/departments')
         if (response.ok) {
           this.departments = await response.json()
         }
@@ -1486,7 +1486,7 @@ export default {
     
     async loadLocations() {
       try {
-        const response = await fetch('http://localhost:5001/locations')
+        const response = await fetch('http://localhost:5001/api/ppe/locations')
         if (response.ok) {
           this.locations = await response.json()
         }
@@ -1497,7 +1497,7 @@ export default {
     
     async loadManagers() {
       try {
-        const response = await fetch('http://localhost:5001/workers?role=manager')
+        const response = await fetch('http://localhost:5001/api/ppe/workers?role=manager')
         if (response.ok) {
           this.managers = await response.json()
         }
@@ -1508,7 +1508,7 @@ export default {
     
     async loadStatistics() {
       try {
-        const response = await fetch('http://localhost:5001/workers/statistics')
+        const response = await fetch('http://localhost:5001/api/ppe/workers/statistics')
         if (response.ok) {
           const stats = await response.json()
           this.totalWorkers = stats.totalWorkers
@@ -1707,13 +1707,13 @@ export default {
         
         let response
         if (this.editingWorker) {
-          response = await fetch(`http://localhost:5001/workers/${this.editingWorker.id}`, {
+          response = await fetch(`http://localhost:5001/api/ppe/workers/${this.editingWorker.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(workerData)
           })
         } else {
-          response = await fetch('http://localhost:5001/workers', {
+          response = await fetch('http://localhost:5001/api/ppe/workers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(workerData)
@@ -1761,7 +1761,7 @@ export default {
         if (this.historyDateFrom) params.append('dateFrom', this.historyDateFrom)
         if (this.historyDateTo) params.append('dateTo', this.historyDateTo)
         
-        const response = await fetch(`http://localhost:5001/workers/history?${params}`)
+        const response = await fetch(`http://localhost:5001/api/ppe/workers/history?${params}`)
         if (response.ok) {
           this.workerHistory = await response.json()
         }
@@ -1805,7 +1805,7 @@ export default {
           notes: this.ppeAssignmentNotes
         }
         
-        const response = await fetch('http://localhost:5001/workers/assign-ppe', {
+        const response = await fetch('http://localhost:5001/api/ppe/workers/assign-ppe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(assignmentData)
@@ -1826,7 +1826,7 @@ export default {
     
     async removePPE(worker, ppe) {
       try {
-        const response = await fetch(`http://localhost:5001/workers/${worker.id}/ppe/${ppe.type}`, {
+        const response = await fetch(`http://localhost:5001/api/ppe/workers/${worker.id}/ppe/${ppe.type}`, {
           method: 'DELETE'
         })
         
@@ -1876,7 +1876,7 @@ export default {
     // İçe/Dışa aktarma
     async exportWorkers() {
       try {
-        const response = await fetch('http://localhost:5001/workers/export', {
+        const response = await fetch('http://localhost:5001/api/ppe/workers/export', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1938,7 +1938,7 @@ export default {
         const formData = new FormData()
         formData.append('file', file)
         
-        const response = await fetch('http://localhost:5001/workers/import/preview', {
+        const response = await fetch('http://localhost:5001/api/ppe/workers/import/preview', {
           method: 'POST',
           body: formData
         })
@@ -1955,7 +1955,7 @@ export default {
     
     async downloadTemplate() {
       try {
-        const response = await fetch('http://localhost:5001/workers/import/template')
+        const response = await fetch('http://localhost:5001/api/ppe/workers/import/template')
         if (response.ok) {
           const blob = await response.blob()
           const url = window.URL.createObjectURL(blob)
@@ -1982,7 +1982,7 @@ export default {
       const validRecords = this.importData.filter(record => !record.errors?.length)
       
       try {
-        const response = await fetch('http://localhost:5001/workers/import', {
+        const response = await fetch('http://localhost:5001/api/ppe/workers/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ workers: validRecords })
@@ -2027,7 +2027,7 @@ export default {
     
     async generateReport(worker) {
       try {
-        const response = await fetch(`http://localhost:5001/workers/${worker.id}/report`, {
+        const response = await fetch(`http://localhost:5001/api/ppe/workers/${worker.id}/report`, {
           method: 'POST'
         })
         
@@ -2054,7 +2054,7 @@ export default {
     async deactivateWorker(worker) {
       if (confirm(`${worker.name} çalışanını pasifleştirmek istediğinizden emin misiniz?`)) {
         try {
-          const response = await fetch(`http://localhost:5001/workers/${worker.id}/deactivate`, {
+          const response = await fetch(`http://localhost:5001/api/ppe/workers/${worker.id}/deactivate`, {
             method: 'PUT'
           })
           
