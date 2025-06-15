@@ -1,4 +1,3 @@
-
 <template>
   <div class="camera-stream-container">
     <!-- Kamera Görüntüsü -->
@@ -182,7 +181,7 @@ export default {
         { id: 'W005', name: 'Ayşe Şahin' }
       ],
       
-      equipmentTypes: ['Baret', 'Gözlük', 'Eldiven', 'Yelek', 'Ayakkabı']
+      equipmentTypes: ['Baret', 'Maske', 'Eldiven', 'Yelek']
     }
   },
   
@@ -343,9 +342,10 @@ export default {
             
             // PPE durumu
             const ppeStatus = [];
-            if (!detection.helmet) ppeStatus.push('Baret');
-            if (!detection.vest) ppeStatus.push('Yelek');
-            if (!detection.gloves) ppeStatus.push('Eldiven');
+                    if (!detection.helmet) ppeStatus.push('Baret');
+        if (!detection.mask) ppeStatus.push('Maske');
+        if (!detection.gloves) ppeStatus.push('Eldiven');
+        if (!detection.vest) ppeStatus.push('Yelek');
             
             if (ppeStatus.length > 0) {
                 ctx.fillText(

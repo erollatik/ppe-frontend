@@ -646,10 +646,9 @@ export default {
     getViolationBadgeClass(type) {
       const typeMap = {
         'Baret': 'danger',
-        'Gözlük': 'warning',
+        'Maske': 'warning',
         'Eldiven': 'info',
-        'Yelek': 'danger',
-        'Ayakkabı': 'warning'
+        'Yelek': 'danger'
       }
       return typeMap[type] || 'secondary'
     },

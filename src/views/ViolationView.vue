@@ -88,9 +88,10 @@
             <label>🦺 İhlal Türü:</label>
             <select v-model="filters.violationType" class="form-control">
               <option value="">Tümü</option>
-              <option value="no_helmet">Baret Yok</option>
-              <option value="no_vest">Yelek Yok</option>
-              <option value="no_gloves">Eldiven Yok</option>
+              <option value="no_helmet">Baret İhlali</option>
+              <option value="no_mask">Maske İhlali</option>
+              <option value="no_gloves">Eldiven İhlali</option>
+              <option value="no_vest">Yelek İhlali</option>
               <option value="multiple">Çoklu İhlal</option>
             </select>
           </div>
@@ -143,7 +144,7 @@
                 </span>
               </th>
               <th @click="sortBy('worker_id')" class="sortable">
-                Çalışan ID
+                Çalışan
                 <span class="sort-icon" v-if="sortField === 'worker_id'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
@@ -218,7 +219,7 @@
               </td>
               <td class="image-cell">
                 <button 
-                  v-if="violation.image_path"
+                  v-if="violation.image_url"
                   @click="showImage(violation)" 
                   class="image-btn"
                   title="Görseli görüntüle"
@@ -365,8 +366,24 @@
               <span>{{ selectedViolation.worker_id || 'Bilinmiyor' }}</span>
             </div>
             <div class="detail-item">
+              <strong>Çalışan Adı:</strong>
+              <span>{{ selectedViolation.worker_name || 'Bilinmiyor' }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>İhlal Türü:</strong>
+              <span>{{ selectedViolation.violation_type || 'Bilinmiyor' }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Lokasyon:</strong>
+              <span>{{ selectedViolation.location || 'Bilinmiyor' }}</span>
+            </div>
+            <div class="detail-item">
               <strong>Güven Seviyesi:</strong>
               <span>{{ (selectedViolation.confidence * 100).toFixed(1) }}%</span>
+            </div>
+            <div class="detail-item full-width">
+              <strong>Açıklama:</strong>
+              <p>{{ selectedViolation.description || 'Açıklama bulunmuyor' }}</p>
             </div>
             <div class="detail-item">
               <strong>İhlal Türleri:</strong>
@@ -379,10 +396,6 @@
                   {{ type.icon }} {{ type.label }}
                 </span>
               </div>
-            </div>
-            <div class="detail-item full-width" v-if="selectedViolation.notes">
-              <strong>Notlar:</strong>
-              <p>{{ selectedViolation.notes }}</p>
             </div>
           </div>
         </div>
@@ -540,15 +553,27 @@ export default {
       // İhlal türü filtresi
       if (this.filters.violationType) {
         filtered = filtered.filter(v => {
+          const description = v.description?.toLowerCase() || ''
+          const violationType = v.violation_type?.toLowerCase() || ''
+          
           switch (this.filters.violationType) {
             case 'no_helmet':
-              return !v.has_helmet
-            case 'no_vest':
-              return !v.has_vest
+              return description.includes('baret') || description.includes('helmet')
+            case 'no_mask':
+              return description.includes('maske') || description.includes('mask')
             case 'no_gloves':
-              return !v.has_gloves
+              return description.includes('eldiven') || description.includes('glove')
+            case 'no_vest':
+              return description.includes('yelek') || description.includes('vest')
             case 'multiple':
-              return (!v.has_helmet + !v.has_vest + !v.has_gloves) > 1
+              // Çoklu ihlal: violation_type'ı "Çoklu İhlal" olanlar VEYA description'da birden fazla PPE türü geçenler
+              if (violationType.includes('çoklu') || violationType.includes('multiple')) {
+                return true
+              }
+              // Alternatif olarak description'da birden fazla PPE türü arayalım
+              const ppeTypes = ['baret', 'helmet', 'maske', 'mask', 'eldiven', 'glove', 'yelek', 'vest', 'gözlük', 'goggle']
+              const foundTypes = ppeTypes.filter(type => description.includes(type))
+              return foundTypes.length > 1
             default:
               return true
           }
@@ -624,47 +649,138 @@ export default {
     getViolationTypes(violation) {
       const types = []
       
-      if (!violation.has_helmet) {
-        types.push({
-          key: 'helmet',
-          icon: '🪖',
-          label: 'Baret Yok',
-          class: 'danger'
-        })
-      }
+      // Backend'den gelen violation_type ve description'a göre ihlal türlerini belirle
+      const violationType = violation.violation_type?.toLowerCase() || ''
+      const description = violation.description?.toLowerCase() || ''
       
-      if (!violation.has_vest) {
-        types.push({
-          key: 'vest',
-          icon: '🦺',
-          label: 'Yelek Yok',
-          class: 'warning'
-        })
-      }
-      
-      if (!violation.has_gloves) {
-        types.push({
-          key: 'gloves',
-          icon: '🧤',
-          label: 'Eldiven Yok',
-          class: 'info'
-        })
+      // Çoklu ihlal kontrolü
+      if (violationType.includes('çoklu') || violationType.includes('multiple')) {
+        // Description'dan hangi PPE türlerinin eksik olduğunu çıkar
+        if (description.includes('baret') || description.includes('helmet')) {
+          types.push({
+            key: 'helmet',
+            icon: '⛑️',
+            label: 'Baret İhlali',
+            class: 'danger'
+          })
+        }
+        
+        if (description.includes('maske') || description.includes('mask')) {
+          types.push({
+            key: 'mask',
+            icon: '😷',
+            label: 'Maske İhlali',
+            class: 'warning'
+          })
+        }
+        
+        if (description.includes('eldiven') || description.includes('glove')) {
+          types.push({
+            key: 'gloves',
+            icon: '🧤',
+            label: 'Eldiven İhlali',
+            class: 'info'
+          })
+        }
+        
+        if (description.includes('yelek') || description.includes('vest')) {
+          types.push({
+            key: 'vest',
+            icon: '🦺',
+            label: 'Yelek İhlali',
+            class: 'warning'
+          })
+        }
+        
+        if (description.includes('gözlük') || description.includes('goggle')) {
+          types.push({
+            key: 'goggles',
+            icon: '🥽',
+            label: 'Gözlük İhlali',
+            class: 'info'
+          })
+        }
+        
+        // Eğer çoklu ihlalde hiç spesifik tür bulunamazsa, genel çoklu ihlal göster
+        if (types.length === 0) {
+          types.push({
+            key: 'multiple',
+            icon: '⚠️',
+            label: 'Çoklu İhlal',
+            class: 'danger'
+          })
+        }
+      } else {
+        // Tekli ihlal kontrolü
+        if (description.includes('baret') || description.includes('helmet')) {
+          types.push({
+            key: 'helmet',
+            icon: '⛑️',
+            label: 'Baret İhlali',
+            class: 'danger'
+          })
+        }
+        
+        if (description.includes('maske') || description.includes('mask')) {
+          types.push({
+            key: 'mask',
+            icon: '😷',
+            label: 'Maske İhlali',
+            class: 'warning'
+          })
+        }
+        
+        if (description.includes('eldiven') || description.includes('glove')) {
+          types.push({
+            key: 'gloves',
+            icon: '🧤',
+            label: 'Eldiven İhlali',
+            class: 'info'
+          })
+        }
+        
+        if (description.includes('yelek') || description.includes('vest')) {
+          types.push({
+            key: 'vest',
+            icon: '🦺',
+            label: 'Yelek İhlali',
+            class: 'warning'
+          })
+        }
+        
+        if (description.includes('gözlük') || description.includes('goggle')) {
+          types.push({
+            key: 'goggles',
+            icon: '🥽',
+            label: 'Gözlük İhlali',
+            class: 'info'
+          })
+        }
+        
+        // Eğer spesifik bir tür bulunamazsa, genel ihlal türünü göster
+        if (types.length === 0) {
+          types.push({
+            key: 'general',
+            icon: '⚠️',
+            label: violation.violation_type || 'Genel İhlal',
+            class: violation.severity === 'high' ? 'danger' : violation.severity === 'medium' ? 'warning' : 'info'
+          })
+        }
       }
       
       return types
     },
     
     getConfidenceClass(confidence) {
-      const percent = confidence * 100
-      if (percent >= 80) return 'high'
-      if (percent >= 50) return 'medium'
+      if (confidence > 0.8) return 'high'
+      if (confidence > 0.5) return 'medium'
       return 'low'
     },
     
     showImage(violation) {
       this.selectedImage = {
         id: violation.id,
-        url: `http://localhost:5001/api/ppe/images/${violation.image_path}`,
+        url: violation.image_url || `http://localhost:5001/api/ppe/images/${violation.image_url}`,
         timestamp: violation.timestamp,
         worker_id: violation.worker_id
       }
@@ -733,6 +849,11 @@ export default {
           link.download = `ihlaller_${new Date().toISOString().split('T')[0]}.xlsx`
           link.click()
           window.URL.revokeObjectURL(url)
+          
+          // Başarı mesajı göster
+          alert('İhlal kayıtları Excel dosyasına aktarıldı! 📊✅')
+        } else {
+          alert('Excel dosyası oluşturulamadı! ❌')
         }
       } catch (error) {
         console.error('Dışa aktarma hatası:', error)
@@ -1024,21 +1145,13 @@ export default {
 
 .confidence-fill {
   height: 100%;
-  transition: width 0.3s;
   border-radius: 10px;
+  transition: width 0.3s ease;
 }
 
-.confidence-fill.high {
-  background: linear-gradient(90deg, #28a745, #20c997);
-}
-
-.confidence-fill.medium {
-  background: linear-gradient(90deg, #ffc107, #fd7e14);
-}
-
-.confidence-fill.low {
-  background: linear-gradient(90deg, #dc3545, #e83e8c);
-}
+.confidence-fill.high { background: #28a745; }
+.confidence-fill.medium { background: #ffc107; }
+.confidence-fill.low { background: #dc3545; }
 
 .confidence-text {
   position: absolute;
@@ -1046,9 +1159,9 @@ export default {
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 0.75rem;
-  font-weight: bold;
+  font-weight: 500;
   color: white;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
 }
 
 .image-btn {

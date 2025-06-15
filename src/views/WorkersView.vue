@@ -1582,12 +1582,9 @@ export default {
       // PPE
       availablePPE: [
         { type: 'Baret', icon: '⛑️', description: 'Kafa koruma bareti', category: 'Kafa Koruma' },
-        { type: 'Gözlük', icon: '🥽', description: 'Güvenlik gözlüğü', category: 'Göz Koruma' },
-        { type: 'Eldiven', icon: '🧤', description: 'İş eldiveni', category: 'El Koruma' },
-        { type: 'Yelek', icon: '🦺', description: 'Güvenlik yeleği', category: 'Vücut Koruma' },
-        { type: 'Ayakkabı', icon: '👷', description: 'Güvenlik ayakkabısı', category: 'Ayak Koruma' },
         { type: 'Maske', icon: '😷', description: 'Solunum maskesi', category: 'Solunum Koruma' },
-        { type: 'Kulaklık', icon: '🎧', description: 'Gürültü önleyici kulaklık', category: 'İşitme Koruma' }
+        { type: 'Eldiven', icon: '🧤', description: 'İş eldiveni', category: 'El Koruma' },
+        { type: 'Yelek', icon: '🦺', description: 'Güvenlik yeleği', category: 'Vücut Koruma' }
       ],
       selectedPPETypes: [],
       ppeAssignmentDate: '',
@@ -2206,7 +2203,9 @@ export default {
           link.download = `calisanlar_${new Date().toISOString().split('T')[0]}.xlsx`
           link.click()
           window.URL.revokeObjectURL(url)
-          this.showMessage('Çalışan listesi dışa aktarıldı! 📊', 'success')
+          this.showMessage('Çalışan listesi Excel dosyasına aktarıldı! 📊✅', 'success')
+        } else {
+          this.showMessage('Excel dosyası oluşturulamadı! ❌', 'error')
         }
       } catch (error) {
         console.error('Dışa aktarma hatası:', error)
@@ -2274,6 +2273,9 @@ export default {
           link.download = 'calisanlar_sablonu.xlsx'
           link.click()
           window.URL.revokeObjectURL(url)
+          this.showMessage('Şablon dosyası indirildi! 📋✅', 'success')
+        } else {
+          this.showMessage('Şablon dosyası oluşturulamadı! ❌', 'error')
         }
       } catch (error) {
         console.error('Şablon indirilemedi:', error)
@@ -2634,12 +2636,9 @@ export default {
     getPPEIcon(type) {
       const iconMap = {
         'Baret': '⛑️',
-        'Gözlük': '🥽',
-        'Eldiven': '🧤',
-        'Yelek': '🦺',
-        'Ayakkabı': '👷',
         'Maske': '😷',
-        'Kulaklık': '🎧'
+        'Eldiven': '🧤',
+        'Yelek': '🦺'
       }
       return iconMap[type] || '🔧'
     },
